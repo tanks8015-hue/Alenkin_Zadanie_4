@@ -11,4 +11,5 @@ struct User {
     int UserID;
     std::wstring Username;
     int RoleID;
+
 };
