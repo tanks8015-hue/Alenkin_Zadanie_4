@@ -61,7 +61,6 @@ bool DatabaseConnector::CreateOrderTransaction(int userId, int partId, int quant
     SQLRETURN ret = SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
 
     if (SQL_SUCCEEDED(ret)) {
-        // Привязываем все 4 параметра (все они типа INT)
         SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &userId, 0, NULL);
         SQLBindParameter(hStmt, 2, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &partId, 0, NULL);
         SQLBindParameter(hStmt, 3, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &quantity, 0, NULL);
@@ -75,7 +74,6 @@ bool DatabaseConnector::CreateOrderTransaction(int userId, int partId, int quant
             return true;
         }
         else {
-            // Если SQLExecute вернул ошибку (например, сработал THROW из-за нехватки товара)
             std::cout << "[ОШИБКА SQL] Транзакция отклонена сервером (возможно, не хватает товара на складе).\n";
         }
     }
@@ -86,7 +84,6 @@ bool DatabaseConnector::CreateOrderTransaction(int userId, int partId, int quant
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
     return false;
 }
-// Реальная проверка логина и пароля в БД
 bool DatabaseConnector::AuthenticateUser(const std::wstring& username, const std::wstring& password) {
     if (!isConnected) return false;
 
@@ -103,7 +100,7 @@ bool DatabaseConnector::AuthenticateUser(const std::wstring& username, const std
     bool isAuthenticated = false;
     if (SQLExecute(hStmt) == SQL_SUCCESS) {
         if (SQLFetch(hStmt) == SQL_SUCCESS) {
-            isAuthenticated = true; // Пользователь найден
+            isAuthenticated = true; 
         }
     }
 
@@ -132,7 +129,6 @@ bool DatabaseConnector::AddPartSafe(const std::wstring& partName, int categoryId
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
     return success;
 }
-// Выборка данных из БД с использованием JOIN
 void DatabaseConnector::ShowPartsFromDB() {
     if (!isConnected) {
         std::cout << "Нет подключения к БД!\n";
@@ -171,8 +167,6 @@ void DatabaseConnector::ShowPartsFromDB() {
 
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
 }
-
-// Экспорт любого сформированного отчета в форматы .csv
 bool DatabaseConnector::ExportOrdersToCSV(const std::string& filename) {
     if (!isConnected) return false;
 
@@ -191,8 +185,6 @@ bool DatabaseConnector::ExportOrdersToCSV(const std::string& filename) {
             SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
             return false;
         }
-
-        // Заголовки разделены точкой с запятой
         file << "ID Заказа;Сотрудник;Деталь;Количество;Цена за шт.\n";
 
         SQLINTEGER orderId, quantity;
@@ -218,4 +210,104 @@ bool DatabaseConnector::ExportOrdersToCSV(const std::string& filename) {
 
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
     return false;
+}
+void DatabaseConnector::ShowOrdersFromDB() {
+    if (!isConnected) return;
+
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+    std::wstring query = L"SELECT o.OrderID, u.Username, o.OrderDate, o.Status "
+        L"FROM Orders o JOIN Users u ON o.UserID = u.UserID "
+        L"ORDER BY o.OrderDate DESC";
+
+    if (SQLExecDirectW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS) == SQL_SUCCESS) {
+        std::cout << "\nID  | Пользователь     | Дата заказа         | Статус\n";
+        std::cout << "-----------------------------------------------------------\n";
+
+        SQLINTEGER id;
+        SQLCHAR user[50], date[30], status[30];
+        SQLLEN cbId, cbUser, cbDate, cbStatus;
+
+        while (SQLFetch(hStmt) == SQL_SUCCESS) {
+            SQLGetData(hStmt, 1, SQL_C_SLONG, &id, 0, &cbId);
+            SQLGetData(hStmt, 2, SQL_C_CHAR, user, sizeof(user), &cbUser);
+            SQLGetData(hStmt, 3, SQL_C_CHAR, date, sizeof(date), &cbDate);
+            SQLGetData(hStmt, 4, SQL_C_CHAR, status, sizeof(status), &cbStatus);
+
+            std::cout << std::left << std::setw(4) << id << "| "
+                << std::setw(17) << user << "| "
+                << std::setw(20) << date << "| "
+                << status << "\n";
+        }
+    }
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+}
+bool DatabaseConnector::CompleteOrder(int orderId) {
+    if (!isConnected) return false;
+
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+    std::wstring query = L"UPDATE Orders SET Status = 'Completed' WHERE OrderID = ? AND Status = 'Processing'";
+
+    SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+    SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &orderId, 0, NULL);
+
+    SQLRETURN ret = SQLExecute(hStmt);
+    SQLLEN rowCount;
+    SQLRowCount(hStmt, &rowCount);
+
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return (SQL_SUCCEEDED(ret) && rowCount > 0);
+}
+void DatabaseConnector::SearchPartsPaginated(double minPrice, double maxPrice, int categoryId, int pageNumber, int rowsPerPage) {
+    if (!isConnected) return;
+
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+    int offset = (pageNumber - 1) * rowsPerPage;
+    std::wstring query = L"SELECT p.PartID, p.PartName, c.CategoryName, p.Price "
+        L"FROM Parts p JOIN Categories c ON p.CategoryID = c.CategoryID "
+        L"WHERE p.Price >= ? AND p.Price <= ? AND p.CategoryID = ? "
+        L"ORDER BY p.PartID "
+        L"OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+
+    SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+    SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_DOUBLE, 0, 0, &minPrice, 0, NULL);
+    SQLBindParameter(hStmt, 2, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_DOUBLE, 0, 0, &maxPrice, 0, NULL);
+    SQLBindParameter(hStmt, 3, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &categoryId, 0, NULL);
+    SQLBindParameter(hStmt, 4, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &offset, 0, NULL);
+    SQLBindParameter(hStmt, 5, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &rowsPerPage, 0, NULL);
+
+    if (SQLExecute(hStmt) == SQL_SUCCESS) {
+        std::cout << "\nID | Название детали          | Категория        | Цена\n";
+        std::cout << "---------------------------------------------------------\n";
+
+        SQLINTEGER id;
+        SQLCHAR name[100], category[100];
+        SQLDOUBLE price;
+        SQLLEN cbId, cbName, cbCategory, cbPrice;
+        bool hasData = false;
+
+        while (SQLFetch(hStmt) == SQL_SUCCESS) {
+            hasData = true;
+            SQLGetData(hStmt, 1, SQL_C_SLONG, &id, 0, &cbId);
+            SQLGetData(hStmt, 2, SQL_C_CHAR, name, sizeof(name), &cbName);
+            SQLGetData(hStmt, 3, SQL_C_CHAR, category, sizeof(category), &cbCategory);
+            SQLGetData(hStmt, 4, SQL_C_DOUBLE, &price, 0, &cbPrice);
+
+            std::cout << std::left << std::setw(3) << id << "| "
+                << std::setw(25) << name << "| "
+                << std::setw(17) << category << "| "
+                << price << "\n";
+        }
+
+        if (!hasData) {
+            std::cout << "По вашему запросу ничего не найдено или страница пуста.\n";
+        }
+    }
+    else {
+        std::cout << "[ОШИБКА SQL] Не удалось выполнить многокритериальный поиск.\n";
+    }
+
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
 }
