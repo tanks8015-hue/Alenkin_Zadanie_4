@@ -98,6 +98,7 @@ int main() {
             std::cout << "Введите цену (формат 0.00): ";
             std::cin >> price;
 
+
             if (!Validator::IsValidPrice(price)) {
                 std::cout << "[ОШИБКА] Неверный формат цены! Ввод отклонен.\n";
             }
