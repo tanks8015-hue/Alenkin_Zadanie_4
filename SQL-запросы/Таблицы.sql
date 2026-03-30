@@ -1,0 +1,75 @@
+CREATE TABLE Roles (
+    RoleID INT PRIMARY KEY IDENTITY(1,1),
+    RoleName NVARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE Users (
+    UserID INT PRIMARY KEY IDENTITY(1,1),
+    Username NVARCHAR(50) NOT NULL UNIQUE,
+    PasswordHash NVARCHAR(256) NOT NULL,
+    RoleID INT NOT NULL,
+    FOREIGN KEY (RoleID) REFERENCES Roles(RoleID) ON DELETE NO ACTION
+);
+
+CREATE TABLE Categories (
+    CategoryID INT PRIMARY KEY IDENTITY(1,1),
+    CategoryName NVARCHAR(100) NOT NULL
+);
+
+CREATE TABLE Suppliers (
+    SupplierID INT PRIMARY KEY IDENTITY(1,1),
+    SupplierName NVARCHAR(150) NOT NULL,
+    ContactEmail NVARCHAR(100)
+);
+
+CREATE TABLE Parts (
+    PartID INT PRIMARY KEY IDENTITY(1,1),
+    PartName NVARCHAR(100) NOT NULL,
+    CategoryID INT NOT NULL,
+    SupplierID INT,
+    Price DECIMAL(10, 2) CHECK (Price >= 0),
+    FOREIGN KEY (CategoryID) REFERENCES Categories(CategoryID),
+    FOREIGN KEY (SupplierID) REFERENCES Suppliers(SupplierID) ON DELETE SET NULL
+);
+
+CREATE TABLE Warehouses (
+    WarehouseID INT PRIMARY KEY IDENTITY(1,1),
+    Location NVARCHAR(200) NOT NULL
+);
+
+CREATE TABLE Inventory (
+    WarehouseID INT NOT NULL,
+    PartID INT NOT NULL,
+    Quantity INT NOT NULL CHECK (Quantity >= 0),
+    PRIMARY KEY (WarehouseID, PartID),
+    FOREIGN KEY (WarehouseID) REFERENCES Warehouses(WarehouseID) ON DELETE CASCADE,
+    FOREIGN KEY (PartID) REFERENCES Parts(PartID) ON DELETE CASCADE
+);
+
+CREATE TABLE Orders (
+    OrderID INT PRIMARY KEY IDENTITY(1,1),
+    UserID INT NOT NULL, 
+    OrderDate DATETIME DEFAULT GETDATE(),
+    Status NVARCHAR(50) DEFAULT 'Pending',
+    FOREIGN KEY (UserID) REFERENCES Users(UserID)
+);
+CREATE TABLE OrderDetails (
+    OrderID INT NOT NULL,
+    PartID INT NOT NULL,
+    Quantity INT NOT NULL CHECK (Quantity > 0),
+    UnitPrice DECIMAL(10, 2) NOT NULL,
+    PRIMARY KEY (OrderID, PartID),
+    FOREIGN KEY (OrderID) REFERENCES Orders(OrderID) ON DELETE CASCADE,
+    FOREIGN KEY (PartID) REFERENCES Parts(PartID)
+);
+
+CREATE TABLE AuditLog (
+    LogID INT PRIMARY KEY IDENTITY(1,1),
+    TableName NVARCHAR(50),
+    RecordID INT,
+    Action NVARCHAR(50),
+    OldValue NVARCHAR(MAX),
+    NewValue NVARCHAR(MAX),
+    ActionDate DATETIME DEFAULT GETDATE(),
+    UserID INT
+);
