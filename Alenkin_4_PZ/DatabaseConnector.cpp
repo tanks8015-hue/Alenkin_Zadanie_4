@@ -46,3 +46,40 @@ bool DatabaseConnector::AddCategorySafe(const std::wstring& categoryName) {
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
     return SQL_SUCCEEDED(ret);
 }
+bool DatabaseConnector::CreateOrderTransaction(int userId, int partId, int quantity, int warehouseId) {
+    if (!isConnected) {
+        std::cout << "Нет подключения к БД!\n";
+        return false;
+    }
+
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+    std::wstring query = L"{CALL sp_CreateOrder(?, ?, ?, ?)}";
+    SQLRETURN ret = SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+
+    if (SQL_SUCCEEDED(ret)) {
+        // Привязываем все 4 параметра (все они типа INT)
+        SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &userId, 0, NULL);
+        SQLBindParameter(hStmt, 2, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &partId, 0, NULL);
+        SQLBindParameter(hStmt, 3, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &quantity, 0, NULL);
+        SQLBindParameter(hStmt, 4, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &warehouseId, 0, NULL);
+
+        // Выполняем процедуру
+        ret = SQLExecute(hStmt);
+
+        if (SQL_SUCCEEDED(ret)) {
+            SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+            return true;
+        }
+        else {
+            // Если SQLExecute вернул ошибку (например, сработал THROW из-за нехватки товара)
+            std::cout << "[ОШИБКА SQL] Транзакция отклонена сервером (возможно, не хватает товара на складе).\n";
+        }
+    }
+    else {
+        std::cout << "[ОШИБКА SQL] Не удалось подготовить вызов процедуры.\n";
+    }
+
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return false;
+}

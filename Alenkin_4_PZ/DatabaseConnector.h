@@ -18,4 +18,5 @@ public:
     bool Connect(const std::wstring& connectionString);
     void Disconnect();
     bool AddCategorySafe(const std::wstring& categoryName);
+    bool CreateOrderTransaction(int userId, int partId, int quantity, int warehouseId);
 };
