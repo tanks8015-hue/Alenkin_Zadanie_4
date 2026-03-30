@@ -363,7 +363,6 @@ void DatabaseConnector::ShowTopProfitableParts() {
     }
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
 }
-// Изменение цены (вызовет срабатывание SQL-триггера аудита)
 bool DatabaseConnector::UpdatePartPrice(int partId, double newPrice) {
     if (!isConnected) return false;
 
@@ -383,6 +382,95 @@ bool DatabaseConnector::UpdatePartPrice(int partId, double newPrice) {
         SQLRowCount(hStmt, &rowCount);
     }
 
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return (rowCount > 0);
+}
+// ================= КАТЕГОРИИ =================
+
+void DatabaseConnector::ShowCategoriesFromDB() {
+    if (!isConnected) return;
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+    std::wstring query = L"SELECT CategoryID, CategoryName FROM Categories";
+
+    if (SQLExecDirectW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS) == SQL_SUCCESS) {
+        std::cout << "\nID | Название категории\n";
+        std::cout << "-----------------------\n";
+        SQLINTEGER id;
+        SQLCHAR name[100];
+        SQLLEN cbId, cbName;
+        while (SQLFetch(hStmt) == SQL_SUCCESS) {
+            SQLGetData(hStmt, 1, SQL_C_SLONG, &id, 0, &cbId);
+            SQLGetData(hStmt, 2, SQL_C_CHAR, name, sizeof(name), &cbName);
+            std::cout << std::left << std::setw(3) << id << "| " << name << "\n";
+        }
+    }
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+}
+
+bool DatabaseConnector::DeleteCategory(int categoryId) {
+    if (!isConnected) return false;
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+    std::wstring query = L"DELETE FROM Categories WHERE CategoryID = ?";
+    SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+    SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &categoryId, 0, NULL);
+
+    SQLRETURN ret = SQLExecute(hStmt);
+    SQLLEN rowCount = 0;
+    if (SQL_SUCCEEDED(ret)) SQLRowCount(hStmt, &rowCount);
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return (rowCount > 0);
+}
+
+// ================= СКЛАДЫ =================
+
+void DatabaseConnector::ShowWarehousesFromDB() {
+    if (!isConnected) return;
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+    std::wstring query = L"SELECT WarehouseID, Location FROM Warehouses";
+
+    if (SQLExecDirectW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS) == SQL_SUCCESS) {
+        std::cout << "\nID | Локация склада\n";
+        std::cout << "-----------------------------------\n";
+        SQLINTEGER id;
+        SQLCHAR loc[200];
+        SQLLEN cbId, cbLoc;
+        while (SQLFetch(hStmt) == SQL_SUCCESS) {
+            SQLGetData(hStmt, 1, SQL_C_SLONG, &id, 0, &cbId);
+            SQLGetData(hStmt, 2, SQL_C_CHAR, loc, sizeof(loc), &cbLoc);
+            std::cout << std::left << std::setw(3) << id << "| " << loc << "\n";
+        }
+    }
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+}
+
+bool DatabaseConnector::AddWarehouse(const std::wstring& location) {
+    if (!isConnected) return false;
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+    std::wstring query = L"INSERT INTO Warehouses (Location) VALUES (?)";
+    SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+    SQLLEN cbLoc = SQL_NTS;
+    SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WVARCHAR, 200, 0, (SQLPOINTER)location.c_str(), 0, &cbLoc);
+
+    SQLRETURN ret = SQLExecute(hStmt);
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return SQL_SUCCEEDED(ret);
+}
+
+bool DatabaseConnector::DeleteWarehouse(int warehouseId) {
+    if (!isConnected) return false;
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+    std::wstring query = L"DELETE FROM Warehouses WHERE WarehouseID = ?";
+    SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+    SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &warehouseId, 0, NULL);
+
+    SQLRETURN ret = SQLExecute(hStmt);
+    SQLLEN rowCount = 0;
+    if (SQL_SUCCEEDED(ret)) SQLRowCount(hStmt, &rowCount);
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
     return (rowCount > 0);
 }
