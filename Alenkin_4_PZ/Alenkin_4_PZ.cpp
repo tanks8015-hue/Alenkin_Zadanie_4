@@ -137,7 +137,6 @@ int main() {
             std::cin >> qty;
             std::cout << "Введите ID склада для списания: ";
             std::cin >> wId;
-
             std::cout << "Вызов хранимой процедуры sp_CreateOrder...\n";
 
             if (DatabaseConnector::GetInstance().CreateOrderTransaction(uId, pId, qty, wId)) {
