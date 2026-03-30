@@ -83,3 +83,49 @@ bool DatabaseConnector::CreateOrderTransaction(int userId, int partId, int quant
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
     return false;
 }
+// Реальная проверка логина и пароля в БД
+bool DatabaseConnector::AuthenticateUser(const std::wstring& username, const std::wstring& password) {
+    if (!isConnected) return false;
+
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+
+    std::wstring query = L"SELECT UserID FROM Users WHERE Username = ? AND PasswordHash = ?";
+    SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+
+    SQLLEN cbUser = SQL_NTS, cbPass = SQL_NTS;
+    SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WVARCHAR, 50, 0, (SQLPOINTER)username.c_str(), 0, &cbUser);
+    SQLBindParameter(hStmt, 2, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WVARCHAR, 256, 0, (SQLPOINTER)password.c_str(), 0, &cbPass);
+
+    bool isAuthenticated = false;
+    if (SQLExecute(hStmt) == SQL_SUCCESS) {
+        if (SQLFetch(hStmt) == SQL_SUCCESS) {
+            isAuthenticated = true; // Пользователь найден
+        }
+    }
+
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return isAuthenticated;
+}
+
+bool DatabaseConnector::AddPartSafe(const std::wstring& partName, int categoryId, int supplierId, double price) {
+    if (!isConnected) return false;
+
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+
+    std::wstring query = L"INSERT INTO Parts (PartName, CategoryID, SupplierID, Price) VALUES (?, ?, ?, ?)";
+    SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+
+    SQLLEN cbName = SQL_NTS;
+    SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WVARCHAR, 100, 0, (SQLPOINTER)partName.c_str(), 0, &cbName);
+    SQLBindParameter(hStmt, 2, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &categoryId, 0, NULL);
+    SQLBindParameter(hStmt, 3, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &supplierId, 0, NULL);
+    SQLBindParameter(hStmt, 4, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_DOUBLE, 0, 0, &price, 0, NULL);
+
+    SQLRETURN ret = SQLExecute(hStmt);
+    bool success = SQL_SUCCEEDED(ret);
+
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return success;
+}

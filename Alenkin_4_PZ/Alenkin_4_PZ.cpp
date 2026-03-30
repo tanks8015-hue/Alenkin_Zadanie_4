@@ -3,6 +3,7 @@
 #include <limits>
 #include "DatabaseConnector.h"
 #include "Validator.h"
+
 void ClearInput() {
     std::cin.clear();
     std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
@@ -47,16 +48,17 @@ int main() {
     setlocale(LC_ALL, "Russian");
     system("chcp 1251 > nul");
 
+    // ТВОЯ СТРОКА ПОДКЛЮЧЕНИЯ (без изменений)
     std::wstring connStr = L"DRIVER={ODBC Driver 17 for SQL Server};SERVER=DESKTOP-PKN6175\\SQLEXPRESS;DATABASE=Alenkin_Zadanie_4;Trusted_Connection=yes;";
 
     std::cout << "Попытка подключения к базе данных...\n";
-    
+
     if (!DatabaseConnector::GetInstance().Connect(connStr)) {
         std::cout << "КРИТИЧЕСКАЯ ОШИБКА: Не удалось подключиться к БД!\n";
         return 1;
     }
     std::cout << "Подключение успешно установлено!\n";
-    
+
 
     int choice = -1;
     while (choice != 0) {
@@ -76,9 +78,12 @@ int main() {
             std::cout << "Введите пароль: ";
             std::cin >> password;
 
-            // Заглушка для теста. Здесь будет вызов AuthManager::Login(login, password)
-            if (login == "Admin" && password == "123") {
-                std::cout << "[УСПЕХ] Вы вошли как Администратор.\n";
+            // РЕАЛЬНАЯ ПРОВЕРКА В БД (переводим string в wstring)
+            std::wstring wLogin(login.begin(), login.end());
+            std::wstring wPassword(password.begin(), password.end());
+
+            if (DatabaseConnector::GetInstance().AuthenticateUser(wLogin, wPassword)) {
+                std::cout << "[УСПЕХ] Вы успешно авторизовались в системе.\n";
             }
             else {
                 std::cout << "[ОШИБКА] Неверный логин или пароль! (Негативный тест пройден)\n";
@@ -97,21 +102,26 @@ int main() {
                 std::cout << "[ОШИБКА] Неверный формат цены! Ввод отклонен.\n";
             }
             else {
-                // Вызов DatabaseConnector::AddPartSafe(...)
-                std::cout << "[УСПЕХ] Деталь '" << name << "' добавлена по цене " << price << ".\n";
+                // РЕАЛЬНОЕ ДОБАВЛЕНИЕ В БД
+                std::wstring wName(name.begin(), name.end());
+                double parsedPrice = std::stod(price);
+
+                // Добавляем деталь (используем ID категории 1 и ID поставщика 1 для теста)
+                if (DatabaseConnector::GetInstance().AddPartSafe(wName, 1, 1, parsedPrice)) {
+                    std::cout << "[УСПЕХ] Деталь '" << name << "' успешно добавлена в базу данных по цене " << price << ".\n";
+                }
+                else {
+                    std::cout << "[ОШИБКА] Не удалось добавить деталь в БД.\n";
+                }
             }
             break;
         }
         case 3:
-            std::cout << "\n--- МНОГОКРИТЕРИАЛЬНЫЙ ПОИСК ---\n";
-            std::cout << "Выполняется сложный JOIN-запрос с пагинацией (OFFSET 0 FETCH NEXT 50)...\n";
-            // Вызов DatabaseConnector::SearchParts(...)
-            std::cout << "ID | Название       | Поставщик    | Склад   | Цена\n";
-            std::cout << "1  | Микроконтроллер| TechProm     | Склад 1 | 1500.00\n";
-            std::cout << "2  | Вал стальной   | MetalWorks   | Склад 1 | 850.50\n";
+            std::cout << "\n--- ВЫБОРКА ДАННЫХ ИЗ БАЗЫ ---\n";
+            DatabaseConnector::GetInstance().ShowPartsFromDB();
             break;
         case 4:
-         {
+        {
             std::cout << "\n--- ОФОРМЛЕНИЕ ЗАКАЗА ---\n";
             int uId, pId, qty, wId;
 
@@ -136,8 +146,13 @@ int main() {
         }
         case 5:
             std::cout << "\n--- ЭКСПОРТ В CSV ---\n";
-            // Здесь вызов ReportExporter::ExportToCSV(...)
-            std::cout << "[УСПЕХ] Отчет сохранен в файл 'report_orders.csv' в папке с программой.\n";
+            // РЕАЛЬНЫЙ ЭКСПОРТ ИЗ БД
+            if (DatabaseConnector::GetInstance().ExportOrdersToCSV("report_orders.csv")) {
+                std::cout << "[УСПЕХ] Отчет сформирован из БД и сохранен в файл 'report_orders.csv'.\n";
+            }
+            else {
+                std::cout << "[ОШИБКА] Не удалось создать отчет.\n";
+            }
             break;
         case 6:
             RunValidatorTests();
@@ -151,6 +166,6 @@ int main() {
         }
     }
 
-    // DatabaseConnector::GetInstance().Disconnect();
+    DatabaseConnector::GetInstance().Disconnect();
     return 0;
 }
