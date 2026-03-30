@@ -1,6 +1,5 @@
 #include "Validator.h"
 #include <regex>
-
 bool Validator::IsValidEmail(const std::string& email) {
     const std::regex pattern(R"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)");
     return std::regex_match(email, pattern);
