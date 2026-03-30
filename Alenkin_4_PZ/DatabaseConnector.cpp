@@ -84,28 +84,27 @@ bool DatabaseConnector::CreateOrderTransaction(int userId, int partId, int quant
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
     return false;
 }
-bool DatabaseConnector::AuthenticateUser(const std::wstring& username, const std::wstring& password) {
-    if (!isConnected) return false;
+int DatabaseConnector::AuthenticateUser(const std::wstring& username, const std::wstring& password) {
+    if (!isConnected) return 0;
 
     SQLHSTMT hStmt;
     SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
-
-    std::wstring query = L"SELECT UserID FROM Users WHERE Username = ? AND PasswordHash = ?";
+    std::wstring query = L"SELECT RoleID FROM Users WHERE Username = ? AND PasswordHash = ?";
     SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
 
     SQLLEN cbUser = SQL_NTS, cbPass = SQL_NTS;
     SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WVARCHAR, 50, 0, (SQLPOINTER)username.c_str(), 0, &cbUser);
     SQLBindParameter(hStmt, 2, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WVARCHAR, 256, 0, (SQLPOINTER)password.c_str(), 0, &cbPass);
 
-    bool isAuthenticated = false;
+    int roleId = 0;
     if (SQLExecute(hStmt) == SQL_SUCCESS) {
         if (SQLFetch(hStmt) == SQL_SUCCESS) {
-            isAuthenticated = true; 
+            SQLLEN cbRole;
+            SQLGetData(hStmt, 1, SQL_C_SLONG, &roleId, 0, &cbRole);
         }
     }
-
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
-    return isAuthenticated;
+    return roleId; 
 }
 
 bool DatabaseConnector::AddPartSafe(const std::wstring& partName, int categoryId, int supplierId, double price) {
