@@ -363,3 +363,26 @@ void DatabaseConnector::ShowTopProfitableParts() {
     }
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
 }
+// Изменение цены (вызовет срабатывание SQL-триггера аудита)
+bool DatabaseConnector::UpdatePartPrice(int partId, double newPrice) {
+    if (!isConnected) return false;
+
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+
+    std::wstring query = L"UPDATE Parts SET Price = ? WHERE PartID = ?";
+    SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+
+    SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_DOUBLE, SQL_DOUBLE, 0, 0, &newPrice, 0, NULL);
+    SQLBindParameter(hStmt, 2, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &partId, 0, NULL);
+
+    SQLRETURN ret = SQLExecute(hStmt);
+
+    SQLLEN rowCount = 0;
+    if (SQL_SUCCEEDED(ret)) {
+        SQLRowCount(hStmt, &rowCount);
+    }
+
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return (rowCount > 0);
+}

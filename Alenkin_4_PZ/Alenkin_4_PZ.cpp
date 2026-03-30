@@ -29,6 +29,7 @@ void ShowMenu() {
     std::cout << "7. Просмотр и завершение заказов (Update/Status)\n";
     std::cout << "8. Удалить деталь (Только для Администратора)\n";
     std::cout << "9. Аналитика: Топ-5 прибыльных деталей (Оконные функции)\n";
+    std::cout << "10. Изменить цену детали (Проверка AuditLog)\n";
     std::cout << "0. Выход\n";
     std::cout << "=================================================\n";
     std::cout << "Выберите действие: ";
@@ -223,6 +224,31 @@ int main() {
             std::cout << "\n--- АНАЛИТИКА (ОКОННЫЕ ФУНКЦИИ) ---\n";
             DatabaseConnector::GetInstance().ShowTopProfitableParts();
             break;
+        case 10: {
+            std::cout << "\n--- ИЗМЕНЕНИЕ ЦЕНЫ (АУДИТ) ---\n";
+            int pId;
+            std::string priceStr;
+
+            std::cout << "Введите ID детали: ";
+            std::cin >> pId;
+            std::cout << "Введите новую цену (формат 0.00): ";
+            std::cin >> priceStr;
+
+            if (!Validator::IsValidPrice(priceStr)) {
+                std::cout << "[ОШИБКА] Неверный формат цены!\n";
+                break;
+            }
+
+            double newPrice = std::stod(priceStr);
+
+            if (DatabaseConnector::GetInstance().UpdatePartPrice(pId, newPrice)) {
+                std::cout << "[УСПЕХ] Цена обновлена! SQL-триггер автоматически записал это в AuditLog.\n";
+            }
+            else {
+                std::cout << "[ОШИБКА] Не удалось обновить цену (неверный ID).\n";
+            }
+            break;
+        }
         case 0:
             std::cout << "Завершение работы программы...\n";
             break;

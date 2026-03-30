@@ -28,4 +28,5 @@ public:
     void ShowOrdersFromDB();
     bool CompleteOrder(int orderId);
     void SearchPartsPaginated(double minPrice, double maxPrice, int categoryId, int pageNumber, int rowsPerPage);
+    bool UpdatePartPrice(int partId, double newPrice);
 };
