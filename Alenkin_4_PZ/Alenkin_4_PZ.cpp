@@ -54,8 +54,6 @@ void RunValidatorTests() {
 int main() {
     setlocale(LC_ALL, "Russian");
     system("chcp 1251 > nul");
-
-    // ТВОЯ СТРОКА ПОДКЛЮЧЕНИЯ (без изменений)
     std::wstring connStr = L"DRIVER={ODBC Driver 17 for SQL Server};SERVER=DESKTOP-PKN6175\\SQLEXPRESS;DATABASE=Alenkin_Zadanie_4;Trusted_Connection=yes;";
 
     std::cout << "Попытка подключения к базе данных...\n";
@@ -110,11 +108,8 @@ int main() {
                 std::cout << "[ОШИБКА] Неверный формат цены! Ввод отклонен.\n";
             }
             else {
-                // РЕАЛЬНОЕ ДОБАВЛЕНИЕ В БД
                 std::wstring wName = ConvertToWideChar(name);
                 double parsedPrice = std::stod(price);
-
-                // Добавляем деталь (используем ID категории 1 и ID поставщика 1 для теста)
                 if (DatabaseConnector::GetInstance().AddPartSafe(wName, 1, 1, parsedPrice)) {
                     std::cout << "[УСПЕХ] Деталь '" << name << "' успешно добавлена в базу данных по цене " << price << ".\n";
                 }
@@ -128,6 +123,7 @@ int main() {
             std::cout << "\n--- ВЫБОРКА ДАННЫХ ИЗ БАЗЫ ---\n";
             DatabaseConnector::GetInstance().ShowPartsFromDB();
             break;
+
         case 4:
         {
             std::cout << "\n--- ОФОРМЛЕНИЕ ЗАКАЗА ---\n";
