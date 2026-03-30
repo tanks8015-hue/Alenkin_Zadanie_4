@@ -26,6 +26,7 @@ void ShowMenu() {
     std::cout << "4. Оформить заказ (Тест транзакции со списанием)\n";
     std::cout << "5. Экспорт отчета в CSV (Интеграция с ФС)\n";
     std::cout << "6. Запустить автоматические тесты Валидатора\n";
+    std::cout << "7. Просмотр и завершение заказов (Update/Status)\n";
     std::cout << "0. Выход\n";
     std::cout << "=================================================\n";
     std::cout << "Выберите действие: ";
@@ -161,6 +162,25 @@ int main() {
         case 6:
             RunValidatorTests();
             break;
+        case 7: {
+            std::cout << "\n--- СПИСОК ЗАКАЗОВ ---\n";
+            DatabaseConnector::GetInstance().ShowOrdersFromDB();
+
+            std::cout << "\nХотите завершить заказ? (Введите ID или 0 для отмены): ";
+            int orderId;
+            if (!(std::cin >> orderId) || orderId == 0) {
+                ClearInput();
+                break;
+            }
+
+            if (DatabaseConnector::GetInstance().CompleteOrder(orderId)) {
+                std::cout << "[УСПЕХ] Заказ #" << orderId << " успешно переведен в статус 'Completed'.\n";
+            }
+            else {
+                std::cout << "[ОШИБКА] Не удалось обновить заказ. Возможно, он уже завершен или ID неверен.\n";
+            }
+            break;
+        }
         case 0:
             std::cout << "Завершение работы программы...\n";
             break;
