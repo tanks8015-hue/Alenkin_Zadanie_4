@@ -33,6 +33,7 @@ void ShowMenu() {
 void RunValidatorTests() {
     std::cout << "\n--- Запуск автоматических тестов (Валидация) ---\n";
 
+
     // Позитивные тесты
     std::cout << "[+] Тест 1 (Позитивный): Корректный Email 'supplier@tech.com' -> ";
     std::cout << (Validator::IsValidEmail("supplier@tech.com") ? "УСПЕХ" : "ОШИБКА") << "\n";
