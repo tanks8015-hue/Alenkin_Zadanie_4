@@ -27,6 +27,8 @@ void ShowMenu() {
     std::cout << "5. Экспорт отчета в CSV (Интеграция с ФС)\n";
     std::cout << "6. Запустить автоматические тесты Валидатора\n";
     std::cout << "7. Просмотр и завершение заказов (Update/Status)\n";
+    std::cout << "8. Удалить деталь (Только для Администратора)\n";
+    std::cout << "9. Аналитика: Топ-5 прибыльных деталей (Оконные функции)\n";
     std::cout << "0. Выход\n";
     std::cout << "=================================================\n";
     std::cout << "Выберите действие: ";
@@ -65,7 +67,7 @@ int main() {
     }
     std::cout << "Подключение успешно установлено!\n";
 
-
+    int currentUserRole = 0;
     int choice = -1;
     while (choice != 0) {
         ShowMenu();
@@ -83,14 +85,17 @@ int main() {
             std::cin >> login;
             std::cout << "Введите пароль: ";
             std::cin >> password;
+
             std::wstring wLogin = ConvertToWideChar(login);
             std::wstring wPassword = ConvertToWideChar(password);
 
-            if (DatabaseConnector::GetInstance().AuthenticateUser(wLogin, wPassword)) {
-                std::cout << "[УСПЕХ] Вы успешно авторизовались в системе.\n";
+            currentUserRole = DatabaseConnector::GetInstance().AuthenticateUser(wLogin, wPassword);
+
+            if (currentUserRole > 0) {
+                std::cout << "[УСПЕХ] Вы успешно авторизовались! Ваша роль ID: " << currentUserRole << "\n";
             }
             else {
-                std::cout << "[ОШИБКА] Неверный логин или пароль! (Негативный тест пройден)\n";
+                std::cout << "[ОШИБКА] Неверный логин или пароль!\n";
             }
             break;
         }
@@ -195,6 +200,29 @@ int main() {
             }
             break;
         }
+        case 8: {
+            std::cout << "\n--- УДАЛЕНИЕ ДЕТАЛИ ---\n";
+            if (currentUserRole != 1) { 
+                std::cout << "[ОТКАЗ В ДОСТУПЕ] Эту операцию может выполнять только Администратор!\n";
+                break;
+            }
+
+            int pId;
+            std::cout << "Введите ID детали для удаления: ";
+            std::cin >> pId;
+
+            if (DatabaseConnector::GetInstance().DeletePartSafe(pId)) {
+                std::cout << "[УСПЕХ] Деталь #" << pId << " успешно удалена из БД.\n";
+            }
+            else {
+                std::cout << "[ОШИБКА] Не удалось удалить деталь (Возможно, на неё есть ссылки в заказах!).\n";
+            }
+            break;
+        }
+        case 9:
+            std::cout << "\n--- АНАЛИТИКА (ОКОННЫЕ ФУНКЦИИ) ---\n";
+            DatabaseConnector::GetInstance().ShowTopProfitableParts();
+            break;
         case 0:
             std::cout << "Завершение работы программы...\n";
             break;

@@ -310,3 +310,56 @@ void DatabaseConnector::SearchPartsPaginated(double minPrice, double maxPrice, i
 
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
 }
+bool DatabaseConnector::DeletePartSafe(int partId) {
+    if (!isConnected) return false;
+
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+
+    std::wstring query = L"DELETE FROM Parts WHERE PartID = ?";
+    SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+    SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &partId, 0, NULL);
+
+    SQLRETURN ret = SQLExecute(hStmt);
+    SQLLEN rowCount = 0;
+    SQLRowCount(hStmt, &rowCount);
+
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return (SQL_SUCCEEDED(ret) && rowCount > 0);
+}
+void DatabaseConnector::ShowTopProfitableParts() {
+    if (!isConnected) return;
+
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+    std::wstring query = L"SELECT TOP 5 PartID, PartName, TotalRevenue, RANK() OVER (ORDER BY TotalRevenue DESC) as RevenueRank "
+        L"FROM (SELECT p.PartID, p.PartName, SUM(od.Quantity * od.UnitPrice) as TotalRevenue "
+        L"FROM Parts p JOIN OrderDetails od ON p.PartID = od.PartID "
+        L"GROUP BY p.PartID, p.PartName) as SalesData";
+
+    if (SQLExecDirectW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS) == SQL_SUCCESS) {
+        std::cout << "\nРейтинг | ID | Название детали          | Общая выручка\n";
+        std::cout << "--------------------------------------------------------\n";
+
+        SQLINTEGER id, rank;
+        SQLCHAR name[100];
+        SQLDOUBLE revenue;
+        SQLLEN cbId, cbName, cbRev, cbRank;
+
+        while (SQLFetch(hStmt) == SQL_SUCCESS) {
+            SQLGetData(hStmt, 1, SQL_C_SLONG, &id, 0, &cbId);
+            SQLGetData(hStmt, 2, SQL_C_CHAR, name, sizeof(name), &cbName);
+            SQLGetData(hStmt, 3, SQL_C_DOUBLE, &revenue, 0, &cbRev);
+            SQLGetData(hStmt, 4, SQL_C_SLONG, &rank, 0, &cbRank);
+
+            std::cout << std::left << std::setw(8) << rank << "| "
+                << std::setw(3) << id << "| "
+                << std::setw(25) << name << "| "
+                << revenue << "\n";
+        }
+    }
+    else {
+        std::cout << "[ОШИБКА SQL] Не удалось собрать аналитику (возможно, еще нет проданных товаров).\n";
+    }
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+}
