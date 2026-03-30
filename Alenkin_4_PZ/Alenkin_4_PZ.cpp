@@ -147,9 +147,9 @@ int main() {
             }
             break;
         }
+
         case 5:
             std::cout << "\n--- ЭКСПОРТ В CSV ---\n";
-            // РЕАЛЬНЫЙ ЭКСПОРТ ИЗ БД
             if (DatabaseConnector::GetInstance().ExportOrdersToCSV("report_orders.csv")) {
                 std::cout << "[УСПЕХ] Отчет сформирован из БД и сохранен в файл 'report_orders.csv'.\n";
             }
