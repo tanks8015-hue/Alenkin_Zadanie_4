@@ -15,6 +15,7 @@ std::wstring ConvertToWideChar(const std::string& str) {
     MultiByteToWideChar(1251, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
     return wstrTo;
 }
+
 void ShowMenu() {
     std::cout << "\n=================================================\n";
     std::cout << "   КОМПЛЕКСНАЯ СИСТЕМА УПРАВЛЕНИЯ ПРЕДПРИЯТИЕМ   \n";
