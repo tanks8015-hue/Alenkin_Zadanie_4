@@ -30,6 +30,8 @@ void ShowMenu() {
     std::cout << "8. Удалить деталь (Только для Администратора)\n";
     std::cout << "9. Аналитика: Топ-5 прибыльных деталей (Оконные функции)\n";
     std::cout << "10. Изменить цену детали (Проверка AuditLog)\n";
+    std::cout << "11. Управление категориями (CRUD)\n";
+    std::cout << "12. Управление складами (CRUD)\n";
     std::cout << "0. Выход\n";
     std::cout << "=================================================\n";
     std::cout << "Выберите действие: ";
@@ -246,6 +248,81 @@ int main() {
             }
             else {
                 std::cout << "[ОШИБКА] Не удалось обновить цену (неверный ID).\n";
+            }
+            break;
+        }
+        case 11: {
+            std::cout << "\n--- УПРАВЛЕНИЕ КАТЕГОРИЯМИ ---\n";
+            std::cout << "1. Показать все категории\n2. Добавить категорию\n3. Удалить категорию (Только Админ)\nВыберите: ";
+            int subChoice;
+            if (!(std::cin >> subChoice)) { ClearInput(); break; }
+
+            if (subChoice == 1) {
+                DatabaseConnector::GetInstance().ShowCategoriesFromDB();
+            }
+            else if (subChoice == 2) {
+                std::string catName;
+                std::cout << "Введите название новой категории: ";
+                std::cin >> catName;
+                if (DatabaseConnector::GetInstance().AddCategorySafe(ConvertToWideChar(catName))) {
+                    std::cout << "[УСПЕХ] Категория добавлена.\n";
+                }
+                else {
+                    std::cout << "[ОШИБКА] Не удалось добавить категорию.\n";
+                }
+            }
+            else if (subChoice == 3) {
+                if (currentUserRole != 1) {
+                    std::cout << "[ОТКАЗ В ДОСТУПЕ] Только Администратор может удалять категории!\n";
+                    break;
+                }
+                int catId;
+                std::cout << "Введите ID категории для удаления: ";
+                std::cin >> catId;
+                if (DatabaseConnector::GetInstance().DeleteCategory(catId)) {
+                    std::cout << "[УСПЕХ] Категория удалена.\n";
+                }
+                else {
+                    std::cout << "[ОШИБКА] Не удалось удалить! Возможно, к этой категории привязаны детали (сработал запрет FK).\n";
+                }
+            }
+            break;
+        }
+
+        case 12: {
+            std::cout << "\n--- УПРАВЛЕНИЕ СКЛАДАМИ ---\n";
+            std::cout << "1. Показать все склады\n2. Добавить склад\n3. Удалить склад (Только Админ)\nВыберите: ";
+            int subChoice;
+            if (!(std::cin >> subChoice)) { ClearInput(); break; }
+
+            if (subChoice == 1) {
+                DatabaseConnector::GetInstance().ShowWarehousesFromDB();
+            }
+            else if (subChoice == 2) {
+                std::string locName;
+                std::cout << "Введите адрес/название нового склада: ";
+                std::cin >> locName;
+                if (DatabaseConnector::GetInstance().AddWarehouse(ConvertToWideChar(locName))) {
+                    std::cout << "[УСПЕХ] Склад добавлен.\n";
+                }
+                else {
+                    std::cout << "[ОШИБКА] Не удалось добавить склад.\n";
+                }
+            }
+            else if (subChoice == 3) {
+                if (currentUserRole != 1) { // Проверка на админа 
+                    std::cout << "[ОТКАЗ В ДОСТУПЕ] Только Администратор может удалять склады!\n";
+                    break;
+                }
+                int wId;
+                std::cout << "Введите ID склада для удаления: ";
+                std::cin >> wId;
+                if (DatabaseConnector::GetInstance().DeleteWarehouse(wId)) {
+                    std::cout << "[УСПЕХ] Склад успешно удален (каскадное удаление запасов выполнено).\n";
+                }
+                else {
+                    std::cout << "[ОШИБКА] Не удалось удалить склад.\n";
+                }
             }
             break;
         }
