@@ -21,7 +21,9 @@ public:
     bool CreateOrderTransaction(int userId, int partId, int quantity, int warehouseId);
     void ShowPartsFromDB();
     bool ExportOrdersToCSV(const std::string& filename);
-    bool AuthenticateUser(const std::wstring& username, const std::wstring& password);
+    int AuthenticateUser(const std::wstring& username, const std::wstring& password);
+    bool DeletePartSafe(int partId);
+    void ShowTopProfitableParts();
     bool AddPartSafe(const std::wstring& partName, int categoryId, int supplierId, double price);
     void ShowOrdersFromDB();
     bool CompleteOrder(int orderId);
