@@ -12,4 +12,5 @@ bool Validator::IsValidPrice(const std::string& price) {
 bool Validator::IsValidDate(const std::string& date) {
     const std::regex pattern(R"(^\d{4}-\d{2}-\d{2}$)");
     return std::regex_match(date, pattern);
+
 }
