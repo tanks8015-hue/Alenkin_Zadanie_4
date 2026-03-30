@@ -3,12 +3,18 @@
 #include <limits>
 #include "DatabaseConnector.h"
 #include "Validator.h"
-
+#include <windows.h>
 void ClearInput() {
     std::cin.clear();
     std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
 }
-
+std::wstring ConvertToWideChar(const std::string& str) {
+    if (str.empty()) return std::wstring();
+    int size_needed = MultiByteToWideChar(1251, 0, &str[0], (int)str.size(), NULL, 0);
+    std::wstring wstrTo(size_needed, 0);
+    MultiByteToWideChar(1251, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+    return wstrTo;
+}
 void ShowMenu() {
     std::cout << "\n=================================================\n";
     std::cout << "   КОМПЛЕКСНАЯ СИСТЕМА УПРАВЛЕНИЯ ПРЕДПРИЯТИЕМ   \n";
@@ -79,8 +85,8 @@ int main() {
             std::cin >> password;
 
             // РЕАЛЬНАЯ ПРОВЕРКА В БД (переводим string в wstring)
-            std::wstring wLogin(login.begin(), login.end());
-            std::wstring wPassword(password.begin(), password.end());
+            std::wstring wLogin = ConvertToWideChar(login);
+            std::wstring wPassword = ConvertToWideChar(password);
 
             if (DatabaseConnector::GetInstance().AuthenticateUser(wLogin, wPassword)) {
                 std::cout << "[УСПЕХ] Вы успешно авторизовались в системе.\n";
@@ -104,7 +110,7 @@ int main() {
             }
             else {
                 // РЕАЛЬНОЕ ДОБАВЛЕНИЕ В БД
-                std::wstring wName(name.begin(), name.end());
+                std::wstring wName = ConvertToWideChar(name);
                 double parsedPrice = std::stod(price);
 
                 // Добавляем деталь (используем ID категории 1 и ID поставщика 1 для теста)
