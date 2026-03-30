@@ -83,8 +83,6 @@ int main() {
             std::cin >> login;
             std::cout << "Введите пароль: ";
             std::cin >> password;
-
-            // РЕАЛЬНАЯ ПРОВЕРКА В БД (переводим string в wstring)
             std::wstring wLogin = ConvertToWideChar(login);
             std::wstring wPassword = ConvertToWideChar(password);
 
@@ -120,10 +118,26 @@ int main() {
             }
             break;
         }
-        case 3:
-            std::cout << "\n--- ВЫБОРКА ДАННЫХ ИЗ БАЗЫ ---\n";
-            DatabaseConnector::GetInstance().ShowPartsFromDB();
+        case 3: {
+            std::cout << "\n--- МНОГОКРИТЕРИАЛЬНЫЙ ПОИСК И ПАГИНАЦИЯ ---\n";
+            double minP, maxP;
+            int catId, page;
+
+            std::cout << "1. Введите минимальную цену (например, 0): ";
+            std::cin >> minP;
+            std::cout << "2. Введите максимальную цену (например, 10000): ";
+            std::cin >> maxP;
+            std::cout << "3. Введите ID категории для поиска (например, 1): ";
+            std::cin >> catId;
+            std::cout << "4. Введите номер страницы (начиная с 1): ";
+            std::cin >> page;
+
+            if (page < 1) page = 1;
+
+            std::cout << "\nРезультаты (Страница " << page << ", лимит 5 записей на страницу):\n";
+            DatabaseConnector::GetInstance().SearchPartsPaginated(minP, maxP, catId, page, 5);
             break;
+        };
 
         case 4:
         {
