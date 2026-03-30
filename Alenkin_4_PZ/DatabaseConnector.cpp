@@ -1,14 +1,7 @@
 #include "DatabaseConnector.h"
 #include <fstream>
 #include <iomanip>
-#include <windows.h>
-std::wstring ConvertToWideChar(const std::string& str) {
-    if (str.empty()) return std::wstring();
-    int size_needed = MultiByteToWideChar(1251, 0, &str[0], (int)str.size(), NULL, 0);
-    std::wstring wstrTo(size_needed, 0);
-    MultiByteToWideChar(1251, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
-    return wstrTo;
-}
+
 DatabaseConnector::DatabaseConnector() : hEnv(SQL_NULL_HENV), hDbc(SQL_NULL_HDBC), isConnected(false) {
     SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &hEnv);
     SQLSetEnvAttr(hEnv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)SQL_OV_ODBC3, 0);
