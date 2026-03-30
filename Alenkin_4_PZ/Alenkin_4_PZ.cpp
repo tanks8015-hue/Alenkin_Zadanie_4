@@ -30,7 +30,6 @@ void ShowMenu() {
     std::cout << "=================================================\n";
     std::cout << "Выберите действие: ";
 }
-
 void RunValidatorTests() {
     std::cout << "\n--- Запуск автоматических тестов (Валидация) ---\n";
 
@@ -42,7 +41,7 @@ void RunValidatorTests() {
     std::cout << "[+] Тест 2 (Позитивный): Корректная цена '1500.50' -> ";
     std::cout << (Validator::IsValidPrice("1500.50") ? "УСПЕХ" : "ОШИБКА") << "\n";
 
-    // Негативные тесты
+    // Негативные 
     std::cout << "[-] Тест 3 (Негативный): Некорректный Email 'supplier_tech.com' -> ";
     std::cout << (!Validator::IsValidEmail("supplier_tech.com") ? "УСПЕХ (отклонено)" : "ОШИБКА (пропущено)") << "\n";
 
