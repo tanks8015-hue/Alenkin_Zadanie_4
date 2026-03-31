@@ -490,3 +490,82 @@ bool DatabaseConnector::BulkUpdateCategoryPrice(int categoryId, double percentag
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
     return (rowCount > 0);
 }
+// ================= СОТРУДНИКИ =================
+
+void DatabaseConnector::ShowUsersFromDB() {
+    if (!isConnected) return;
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+    std::wstring query = L"SELECT u.UserID, u.Username, r.RoleName "
+        L"FROM Users u JOIN Roles r ON u.RoleID = r.RoleID";
+
+    if (SQLExecDirectW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS) == SQL_SUCCESS) {
+        std::cout << "\nID | Логин сотрудника     | Должность (Роль)\n";
+        std::cout << "----------------------------------------------\n";
+        SQLINTEGER id;
+        SQLCHAR username[50], roleName[50];
+        SQLLEN cbId, cbUser, cbRole;
+
+        while (SQLFetch(hStmt) == SQL_SUCCESS) {
+            SQLGetData(hStmt, 1, SQL_C_SLONG, &id, 0, &cbId);
+            SQLGetData(hStmt, 2, SQL_C_CHAR, username, sizeof(username), &cbUser);
+            SQLGetData(hStmt, 3, SQL_C_CHAR, roleName, sizeof(roleName), &cbRole);
+
+            std::cout << std::left << std::setw(3) << id << "| "
+                << std::setw(21) << username << "| "
+                << roleName << "\n";
+        }
+    }
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+}
+
+bool DatabaseConnector::AddUser(const std::wstring& username, const std::wstring& password, int roleId) {
+    if (!isConnected) return false;
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+
+    std::wstring query = L"INSERT INTO Users (Username, PasswordHash, RoleID) VALUES (?, ?, ?)";
+    SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+
+    SQLLEN cbUser = SQL_NTS, cbPass = SQL_NTS;
+    SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WVARCHAR, 50, 0, (SQLPOINTER)username.c_str(), 0, &cbUser);
+    SQLBindParameter(hStmt, 2, SQL_PARAM_INPUT, SQL_C_WCHAR, SQL_WVARCHAR, 256, 0, (SQLPOINTER)password.c_str(), 0, &cbPass);
+    SQLBindParameter(hStmt, 3, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &roleId, 0, NULL);
+
+    SQLRETURN ret = SQLExecute(hStmt);
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return SQL_SUCCEEDED(ret);
+}
+
+bool DatabaseConnector::DeleteUser(int userId) {
+    if (!isConnected) return false;
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+
+    std::wstring query = L"DELETE FROM Users WHERE UserID = ?";
+    SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+    SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &userId, 0, NULL);
+
+    SQLRETURN ret = SQLExecute(hStmt);
+    SQLLEN rowCount = 0;
+    if (SQL_SUCCEEDED(ret)) SQLRowCount(hStmt, &rowCount);
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return (rowCount > 0);
+}
+bool DatabaseConnector::DeleteOrder(int orderId) {
+    if (!isConnected) return false;
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+    std::wstring query = L"DELETE FROM Orders WHERE OrderID = ?";
+    SQLPrepareW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS);
+    SQLBindParameter(hStmt, 1, SQL_PARAM_INPUT, SQL_C_SLONG, SQL_INTEGER, 0, 0, &orderId, 0, NULL);
+
+    SQLRETURN ret = SQLExecute(hStmt);
+    SQLLEN rowCount = 0;
+    if (SQL_SUCCEEDED(ret)) {
+        SQLRowCount(hStmt, &rowCount);
+    }
+
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+    return (rowCount > 0);
+}

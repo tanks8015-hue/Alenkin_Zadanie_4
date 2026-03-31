@@ -26,13 +26,14 @@ void ShowMenu() {
     std::cout << "4. Оформить заказ (Тест транзакции со списанием)\n";
     std::cout << "5. Экспорт отчета в CSV (Интеграция с ФС)\n";
     std::cout << "6. Запустить автоматические тесты Валидатора\n";
-    std::cout << "7. Просмотр и завершение заказов (Update/Status)\n";
+    std::cout << "7. Управление заказами (Просмотр, Статусы, Удаление)\n";
     std::cout << "8. Удалить деталь (Только для Администратора)\n";
     std::cout << "9. Аналитика: Топ-5 прибыльных деталей (Оконные функции)\n";
     std::cout << "10. Изменить цену детали (Проверка AuditLog)\n";
     std::cout << "11. Управление категориями (CRUD)\n";
     std::cout << "12. Управление складами (CRUD)\n";
     std::cout << "13. Массовая переоценка категории (Скидки/Инфляция)\n";
+    std::cout << "14. Управление сотрудниками (Только Админ)\n";
     std::cout << "0. Выход\n";
     std::cout << "=================================================\n";
     std::cout << "Выберите действие: ";
@@ -41,7 +42,6 @@ void RunValidatorTests() {
     std::cout << "\n--- Запуск автоматических тестов (Валидация) ---\n";
 
 
-    // Позитивные тесты
     std::cout << "[+] Тест 1 (Позитивный): Корректный Email 'supplier@tech.com' -> ";
     std::cout << (Validator::IsValidEmail("supplier@tech.com") ? "УСПЕХ" : "ОШИБКА") << "\n";
 
@@ -186,21 +186,40 @@ int main() {
             RunValidatorTests();
             break;
         case 7: {
-            std::cout << "\n--- СПИСОК ЗАКАЗОВ ---\n";
-            DatabaseConnector::GetInstance().ShowOrdersFromDB();
+            std::cout << "\n--- УПРАВЛЕНИЕ ЗАКАЗАМИ ---\n";
+            std::cout << "1. Показать все заказы\n2. Завершить заказ (Completed)\n3. Удалить заказ (Только Админ)\nВыберите: ";
+            int subChoice;
+            if (!(std::cin >> subChoice)) { ClearInput(); break; }
 
-            std::cout << "\nХотите завершить заказ? (Введите ID или 0 для отмены): ";
-            int orderId;
-            if (!(std::cin >> orderId) || orderId == 0) {
-                ClearInput();
-                break;
+            if (subChoice == 1) {
+                DatabaseConnector::GetInstance().ShowOrdersFromDB();
             }
+            else if (subChoice == 2) {
+                int oId;
+                std::cout << "Введите ID заказа для завершения: ";
+                std::cin >> oId;
+                if (DatabaseConnector::GetInstance().CompleteOrder(oId)) {
+                    std::cout << "[УСПЕХ] Заказ #" << oId << " успешно переведен в статус 'Completed'.\n";
+                }
+                else {
+                    std::cout << "[ОШИБКА] Не удалось обновить заказ (неверный ID или уже завершен).\n";
+                }
+            }
+            else if (subChoice == 3) {
+                if (currentUserRole != 1) {
+                    std::cout << "[ОТКАЗ В ДОСТУПЕ] Только Администратор может удалять заказы из базы!\n";
+                    break;
+                }
+                int oId;
+                std::cout << "Введите ID заказа для удаления: ";
+                std::cin >> oId;
 
-            if (DatabaseConnector::GetInstance().CompleteOrder(orderId)) {
-                std::cout << "[УСПЕХ] Заказ #" << orderId << " успешно переведен в статус 'Completed'.\n";
-            }
-            else {
-                std::cout << "[ОШИБКА] Не удалось обновить заказ. Возможно, он уже завершен или ID неверен.\n";
+                if (DatabaseConnector::GetInstance().DeleteOrder(oId)) {
+                    std::cout << "[УСПЕХ] Заказ #" << oId << " успешно удален (связанные детали удалены каскадно).\n";
+                }
+                else {
+                    std::cout << "[ОШИБКА] Не удалось удалить заказ (возможно, неверный ID).\n";
+                }
             }
             break;
         }
@@ -329,7 +348,7 @@ int main() {
         }
         case 13: {
             std::cout << "\n--- МАССОВАЯ ПЕРЕОЦЕНКА ТОВАРОВ ---\n";
-            if (currentUserRole != 1) { // Проверка на Администратора
+            if (currentUserRole != 1) {
                 std::cout << "[ОТКАЗ В ДОСТУПЕ] Только Администратор имеет право массово менять цены!\n";
                 break;
             }
@@ -346,6 +365,50 @@ int main() {
             }
             else {
                 std::cout << "[ОШИБКА] Не удалось обновить цены (неверный ID или в категории нет деталей).\n";
+            }
+            break;
+        }
+        case 14: {
+            std::cout << "\n--- УПРАВЛЕНИЕ СОТРУДНИКАМИ ---\n";
+            if (currentUserRole != 1) {
+                std::cout << "[ОТКАЗ В ДОСТУПЕ] Только Администратор может управлять персоналом!\n";
+                break;
+            }
+
+            std::cout << "1. Показать всех сотрудников\n2. Добавить нового сотрудника\n3. Уволить (Удалить) сотрудника\nВыберите: ";
+            int subChoice;
+            if (!(std::cin >> subChoice)) { ClearInput(); break; }
+
+            if (subChoice == 1) {
+                DatabaseConnector::GetInstance().ShowUsersFromDB();
+            }
+            else if (subChoice == 2) {
+                std::string newUser, newPass;
+                int rId;
+                std::cout << "Введите логин нового сотрудника: ";
+                std::cin >> newUser;
+                std::cout << "Введите пароль: ";
+                std::cin >> newPass;
+                std::cout << "Введите ID роли (1 - Admin, 2 - Manager, 3 - Worker): ";
+                std::cin >> rId;
+
+                if (DatabaseConnector::GetInstance().AddUser(ConvertToWideChar(newUser), ConvertToWideChar(newPass), rId)) {
+                    std::cout << "[УСПЕХ] Сотрудник успешно добавлен в систему.\n";
+                }
+                else {
+                    std::cout << "[ОШИБКА] Не удалось добавить сотрудника (возможно, такой логин уже существует).\n";
+                }
+            }
+            else if (subChoice == 3) {
+                int uId;
+                std::cout << "Введите ID сотрудника для увольнения: ";
+                std::cin >> uId;
+                if (DatabaseConnector::GetInstance().DeleteUser(uId)) {
+                    std::cout << "[УСПЕХ] Сотрудник успешно удален из системы.\n";
+                }
+                else {
+                    std::cout << "[ОШИБКА] Не удалось удалить сотрудника (возможно, у него есть активные заказы).\n";
+                }
             }
             break;
         }

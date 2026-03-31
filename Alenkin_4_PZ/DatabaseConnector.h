@@ -35,4 +35,8 @@ public:
     bool AddWarehouse(const std::wstring& location);
     bool DeleteWarehouse(int warehouseId);
     bool BulkUpdateCategoryPrice(int categoryId, double percentage);
+    void ShowUsersFromDB();
+    bool AddUser(const std::wstring& username, const std::wstring& password, int roleId);
+    bool DeleteUser(int userId);
+    bool DeleteOrder(int orderId);
 };
