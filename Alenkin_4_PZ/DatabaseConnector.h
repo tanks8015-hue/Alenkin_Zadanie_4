@@ -34,4 +34,5 @@ public:
     void ShowWarehousesFromDB();
     bool AddWarehouse(const std::wstring& location);
     bool DeleteWarehouse(int warehouseId);
+    bool BulkUpdateCategoryPrice(int categoryId, double percentage);
 };
