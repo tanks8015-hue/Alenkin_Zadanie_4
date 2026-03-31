@@ -569,3 +569,45 @@ bool DatabaseConnector::DeleteOrder(int orderId) {
     SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
     return (rowCount > 0);
 }
+// Доп. функция 1: Автоматический контроль критических остатков
+void DatabaseConnector::CheckLowStockAlerts() {
+    if (!isConnected) return;
+
+    SQLHSTMT hStmt;
+    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt);
+
+    // Ищем детали, которых на любом из складов осталось 50 или меньше
+    std::wstring query = L"SELECT p.PartName, w.Location, i.Quantity "
+        L"FROM Inventory i "
+        L"JOIN Parts p ON i.PartID = p.PartID "
+        L"JOIN Warehouses w ON i.WarehouseID = w.WarehouseID "
+        L"WHERE i.Quantity <= 50";
+
+    if (SQLExecDirectW(hStmt, (SQLWCHAR*)query.c_str(), SQL_NTS) == SQL_SUCCESS) {
+        bool hasAlerts = false;
+        SQLCHAR name[100], location[200];
+        SQLINTEGER qty;
+        SQLLEN cbName, cbLoc, cbQty;
+
+        while (SQLFetch(hStmt) == SQL_SUCCESS) {
+            if (!hasAlerts) {
+                // Если нашли хотя бы одну деталь, выводим заголовок ахтунга
+                std::cout << "\n[ВНИМАНИЕ] СИСТЕМА ОПОВЕЩЕНИЙ: КРИТИЧЕСКИЕ ОСТАТКИ НА СКЛАДАХ!\n";
+                std::cout << "---------------------------------------------------------\n";
+                hasAlerts = true;
+            }
+            SQLGetData(hStmt, 1, SQL_C_CHAR, name, sizeof(name), &cbName);
+            SQLGetData(hStmt, 2, SQL_C_CHAR, location, sizeof(location), &cbLoc);
+            SQLGetData(hStmt, 3, SQL_C_SLONG, &qty, 0, &cbQty);
+
+            std::cout << " -> Деталь '" << name << "' на складе '" << location
+                << "' заканчивается! Остаток: " << qty << " шт.\n";
+        }
+
+        if (hasAlerts) {
+            std::cout << "Рекомендуется срочно связаться с поставщиками!\n";
+            std::cout << "---------------------------------------------------------\n";
+        }
+    }
+    SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+}

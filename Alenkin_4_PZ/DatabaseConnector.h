@@ -39,4 +39,5 @@ public:
     bool AddUser(const std::wstring& username, const std::wstring& password, int roleId);
     bool DeleteUser(int userId);
     bool DeleteOrder(int orderId);
+    void CheckLowStockAlerts();
 };
