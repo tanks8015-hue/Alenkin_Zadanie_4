@@ -111,18 +111,34 @@ int main() {
             std::cout << "Введите цену (формат 0.00): ";
             std::cin >> price;
 
-
             if (!Validator::IsValidPrice(price)) {
                 std::cout << "[ОШИБКА] Неверный формат цены! Ввод отклонен.\n";
             }
             else {
+                std::cout << "\nДоступные категории:\n";
+                DatabaseConnector::GetInstance().ShowCategoriesFromDB();
+
+                int catId;
+                std::cout << "\nВведите ID категории из списка выше: ";
+                if (!(std::cin >> catId)) {
+                    ClearInput();
+                    std::cout << "[ОШИБКА] Неверный ввод ID категории!\n";
+                    break;
+                }
+                int supId;
+                std::cout << "Введите ID поставщика (например, 1 - TechProm, 2 - MetalWorks): ";
+                if (!(std::cin >> supId)) {
+                    ClearInput();
+                    std::cout << "[ОШИБКА] Неверный ввод ID поставщика!\n";
+                    break;
+                }
                 std::wstring wName = ConvertToWideChar(name);
                 double parsedPrice = std::stod(price);
-                if (DatabaseConnector::GetInstance().AddPartSafe(wName, 1, 1, parsedPrice)) {
-                    std::cout << "[УСПЕХ] Деталь '" << name << "' успешно добавлена в базу данных по цене " << price << ".\n";
+                if (DatabaseConnector::GetInstance().AddPartSafe(wName, catId, supId, parsedPrice)) {
+                    std::cout << "[УСПЕХ] Деталь '" << name << "' успешно добавлена в базу данных!\n";
                 }
                 else {
-                    std::cout << "[ОШИБКА] Не удалось добавить деталь в БД.\n";
+                    std::cout << "[ОШИБКА] Не удалось добавить деталь в БД (возможно, вы ввели несуществующий ID категории или поставщика).\n";
                 }
             }
             break;
